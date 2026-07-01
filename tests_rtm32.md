@@ -234,3 +234,48 @@ Verificar que el valor final del PC coincida matemáticamente con la ecuación d
 Conclusiones:Anduvo. Se llegó a esta conclusión debido a que la condición evaluada ($R[10] == R[11]$) resultó verdadera, lo que disparó el recálculo del flujo de ejecución sin levantar ninguna excepción en el registro CAUSE. 
 
 Siguiendo la fórmula arquitectónica del procesador STX4 , el sistema tomó el valor del PC de la siguiente instrucción (4) y le sumó el desplazamiento calculado a partir del inmediato ($2 \times 4 = 8$). El resultado final arrojó correctamente un nuevo PC de 0x0000000C ($12$ en decimal), demostrando que la unidad de control procesa los saltos incondicionales de manera adecuada.
+
+# Caso 5
+## Descripción:
+Testeo de la instrucción aritmética de tipo R `SUB` para verificar la resta entre dos registros de propósito general.
+
+## Instrucctions: instrucciones que use durante el test
+* `reset`
+* `set r10 10`
+* `set r11 4`
+* `set [0x0] 0x0296C01D`
+* `set pc 0x0`
+* `step 1`
+* `registers`
+
+## Precondiciones: 
+- El sistema debe estar reseteado y en modo KERNEL.
+- Se cargan previamente los registros `R10` con `10` ($0xA$) y `R11` con `4` para realizar la operación $10 - 4$.
+- [cite_start]Se escribe en la dirección de memoria `0x0` la instrucción `0x0296C01D`, correspondiente a `sub $12, $10, $11` (Opcode 00000, funct 011101).
+- El PC debe apuntar a `0x0`.
+
+## Code
+```text
+RTM32> reset
+System reset sequence complete. Target PC: 0xF0000000 (Mode: KERNEL)
+RTM32> set r10 10
+Register R10 set to 0x0000000A
+RTM32> set r11 4
+Register R11 set to 0x00000004
+RTM32> set [0x0] 0x0296C01D   
+RTM32> set pc 0x0
+Program Counter (PC) set to 0x00000000
+RTM32> step 1
+Stepped instructions. Target PC: 0x00000004
+RTM32> registers
+=== General Purpose Registers ===
+R[ 0]: 0x00000000   R[ 1]: 0x00000000   R[ 2]: 0x00000000   R[ 3]: 0x00000000
+R[ 8]: 0x00000000   R[ 9]: 0x00000000   R[10]: 0x0000000A   R[11]: 0x00000004
+R[12]: 0x00000006   R[13]: 0x00000000   R[14]: 0x00000000   R[15]: 0x00000000
+...
+=== Control & Special Registers ===
+PC      : 0x00000004  CAUSE   : 0x00000000  EPC     : 0x00000000
+
+Postcondiciones:Ejecutar el comando registers para evaluar si R12 almacenó el resultado esperado.Comprobar que el registro CAUSE se mantenga en 0x00000000.
+
+Conclusiones:Anduvo. Se llegó a esta conclusión porque tras realizar el paso de ejecución, el registro destino R12 pasó a valer 0x6 ($10 - 4 = 6$), demostrando que la ALU procesa correctamente las restas en formato Tipo R sin generar desbordamientos ni excepciones en el estado de control.
