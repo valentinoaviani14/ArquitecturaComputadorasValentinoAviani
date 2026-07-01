@@ -172,3 +172,5 @@ Verificar que el registro CAUSE permanezca en 0x00000000, garantizando que la ej
 
 Conclusiones:
 Anduvo. Se llegó a esta conclusión debido a que tras realizar el paso único (step 1), el registro de control CAUSE se mantuvo en 0x00000000, indicando que no se generaron excepciones. Asimismo, la interfaz reportó exitosamente un evento de escritura en memoria (Type: WRITE) sobre la dirección efectiva calculada 0x00000000.
+
+
