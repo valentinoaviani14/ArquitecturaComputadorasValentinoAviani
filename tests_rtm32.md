@@ -251,7 +251,7 @@ Testeo de la instrucción aritmética de tipo R `SUB` para verificar la resta en
 ## Precondiciones: 
 - El sistema debe estar reseteado y en modo KERNEL.
 - Se cargan previamente los registros `R10` con `10` ($0xA$) y `R11` con `4` para realizar la operación $10 - 4$.
-- [cite_start]Se escribe en la dirección de memoria `0x0` la instrucción `0x0296C01D`, correspondiente a `sub $12, $10, $11` (Opcode 00000, funct 011101).
+- Se escribe en la dirección de memoria `0x0` la instrucción `0x0296C01D`, correspondiente a `sub $12, $10, $11` (Opcode 00000, funct 011101).
 - El PC debe apuntar a `0x0`.
 
 ## Code
@@ -594,3 +594,29 @@ PC      : 0x00000020  CAUSE   : 0x00000000
 Postcondiciones:Asegurar que el PC tome de forma absoluta el contenido de R10.
 
 Conclusiones:Anduvo. No se detectaron fallos de cálculo. El registro PC fue sobreescrito directamente por la unidad de control, abandonando la secuencia secuencial e incrustando el valor absoluto que residía en el registro fuente (0x20), logrando un cambio de flujo dinámico exitoso.
+
+# Instrucciones restantes:
+
+## Cuadro Resumen: Instrucciones Restantes
+
+A continuación se detalla la planificación para las instrucciones de la arquitectura STX4 que restan ser validadas en el simulador RTM32. Para optimizar el testeo, las agrupo por familia de operación.
+
+| Familia / Instrucciones | Formato | Propósito del Test | Setup (¿Qué debo hacer en consola?) | Verificación (Postcondiciones) |
+| :--- | :---: | :--- | :--- | :--- |
+| **Saltos a Subrutinas**<br>`JAL`, `JALR` | J / R | Validar el enlace y guardado de la dirección de retorno. | Cargar la instrucción de salto. No requiere variables previas. Ejecutar `step 1`. | Verificar que el `PC` apunte al destino del salto y que obligatoriamente el registro `$ra` (`R31`) haya guardado `PC + 4` |
+
+| **Lógicas Inmediatas**<br>`ANDI`, `ORI`, `XORI` | L | Comprobar máscaras de bits contra constantes de 16 bits. | Setear un registro origen (ej. `R10`) con datos y cargar la instrucción con la constante (Formato L). | Observar el registro destino. **Ojo:** Para `ANDI` verificar si arroja excepción (`CAUSE: 0x3`), ya que el manual advierte un bug crítico en esta instrucción. |
+
+| **Multiplicación y División**<br>`MUL`, `DIV`, `REST` | R | Evaluar la unidad aritmética compleja y guardado en 32/64 bits. | Cargar dos operandos numéricos en dos registros origen y ejecutar. | Revisar que el registro destino contenga el producto, cociente o resto exacto. |
+
+| **Memoria Parcial**<br>`SH`, `SB`, `LH`, `LB` | I | Testear lecturas y escrituras de media palabra (16 bits) y bytes (8 bits). | Setear la memoria con un patrón (para Loads) o un registro (para Stores). | Ejecutar comando de memoria (`dump` o `examine`) y comprobar que los accesos alineados y no alineados escriban/lean la cantidad correcta de bytes. |
+
+| **Desplazamientos Extra**<br>`SRL`, `SRA`, `SLLR`, `SRLR` | R | Comprobar desplazamientos lógicos/aritméticos a derecha y mediante registros. | Setear un registro a desplazar y cargar el inmediato en `aux` o en otro registro (versiones `R`). | Verificar el registro destino y prestar atención al bit de signo en los desplazamientos aritméticos (`SRA`). |
+
+| **Branches Extendidos**<br>`BGT`, `BLT`, `BLE`, `BGE` | I | Validar ramificaciones por comparaciones de mayor/menor/igual. | Setear registros origen forzando condiciones verdaderas y falsas alternadamente. | Comprobar si el `PC` salta calculando $PC + 4 + offset$ o si sigue de largo dependiendo de la condición. |
+
+| **Comparaciones (Set)** <br>`SLTU`, `SLTI`, `SLTIU` | R / I | Testear la bandera de "menor que" con constantes y sin signo. | Cargar registros con valores donde uno sea menor y luego mayor que el otro o que el inmediato. | Constatar que el registro destino cambie exclusivamente a `0x1` (verdadero) o `0x0` (falso). |
+
+| **Sistema y Excepciones**<br>`TRAP`, `RFT`, `CFS`, `CTS` | R | Probar el pasaje a manejadores de excepciones y lectura de registros especiales. | Ejecutar la instrucción `TRAP` o usar `CFS/CTS` apuntando al registro `CAUSE`. | Confirmar si `PC` toma el valor del vector de interrupción y si el `EPC` guardó el retorno. |
+
+> **Nota de testeo:** Debido a la inconsistencia detectada en las pruebas con formatos que utilizan operandos inmediatos (como ocurrió previamente con `ADDI` y `SW`), es altamente probable que las familias de **Lógicas Inmediatas** y **Memoria Parcial** presenten excepciones tempranas (`CAUSE: 0x00000003`) atribuibles a fallas del propio entorno del simulador al decodificar la estructura tipo I/L.
