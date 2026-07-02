@@ -15,10 +15,10 @@ Testeo de la instrucción aritmética de tipo R `ADD` para verificar la correcta
 
 ## Precondiciones: 
 - El sistema debe estar reseteado y en modo Kernel por defecto.
-- [cite_start]Se debe cargar previamente el valor `5` en el registro `R10` ($R[10]$ o `$t0`) mediante el comando de depuración[cite: 3, 13].
-- [cite_start]Se debe cargar previamente el valor `3` en el registro `R11` ($R[11]$ o `$t1`)[cite: 3, 13].
-- [cite_start]Se escribe en la dirección de memoria `0x0` la instrucción en hexadecimal `0x0296C01C`, que corresponde a `add $12, $10, $11` en la arquitectura STX4[cite: 39, 42, 62, 145].
-- [cite_start]El Contador de Programa (PC) debe apuntar a la dirección `0x0`.
+- Se debe cargar previamente el valor `5` en el registro `R10` ($R[10]$ o `$t0`) mediante el comando de depuración.
+- Se debe cargar previamente el valor `3` en el registro `R11` ($R[11]$ o `$t1`)
+- Se escribe en la dirección de memoria `0x0` la instrucción en hexadecimal `0x0296C01C`, que corresponde a `add $12, $10, $11` en la arquitectura STX4
+- El Contador de Programa (PC) debe apuntar a la dirección `0x0`.
 
 ## Code
 RTM32> reset
@@ -185,8 +185,8 @@ Testeo de la instrucción de salto condicional de tipo I `BEQ` (Branch on Equal)
 
 ## Precondiciones: 
 - El procesador se inicializa mediante la secuencia de reset completa, operando en modo KERNEL.
-- [cite_start]Se cargan previamente los registros `R10` y `R11` con el mismo valor numérico (`5`) para forzar que la condición analizada por la instrucción sea verdadera.
-- [cite_start]Se escribe en la dirección de memoria `0x0` la instrucción en hexadecimal `0x82960002`, que corresponde a `beq $10, $11, 2` en la arquitectura STX4.
+- Se cargan previamente los registros `R10` y `R11` con el mismo valor numérico (`5`) para forzar que la condición analizada por la instrucción sea verdadera.
+- Se escribe en la dirección de memoria `0x0` la instrucción en hexadecimal `0x82960002`, que corresponde a `beq $10, $11, 2` en la arquitectura STX4.
 - El Contador de Programa (PC) debe apuntar a la dirección inicial `0x0`.
 
 ## Code
@@ -255,7 +255,6 @@ Testeo de la instrucción aritmética de tipo R `SUB` para verificar la resta en
 - El PC debe apuntar a `0x0`.
 
 ## Code
-```text
 RTM32> reset
 System reset sequence complete. Target PC: 0xF0000000 (Mode: KERNEL)
 RTM32> set r10 10
@@ -279,3 +278,319 @@ PC      : 0x00000004  CAUSE   : 0x00000000  EPC     : 0x00000000
 Postcondiciones:Ejecutar el comando registers para evaluar si R12 almacenó el resultado esperado.Comprobar que el registro CAUSE se mantenga en 0x00000000.
 
 Conclusiones:Anduvo. Se llegó a esta conclusión porque tras realizar el paso de ejecución, el registro destino R12 pasó a valer 0x6 ($10 - 4 = 6$), demostrando que la ALU procesa correctamente las restas en formato Tipo R sin generar desbordamientos ni excepciones en el estado de control.
+
+# Caso 6
+
+Descripción:Testeo de la instrucción lógica de tipo R AND para evaluar el enmascaramiento bit a bit entre dos registros.
+
+Instrucctions: instrucciones que use durante el test
+
+reset
+
+set r10 0xFFFF
+
+set r11 0x000F
+
+set [0x0] 0x0296C008
+
+set pc 0x0
+
+step 1
+
+registers
+
+Precondiciones:El sistema está reseteado en modo KERNEL.Se cargan los registros R10 con 0xFFFF y R11 con 0x000F para testear la compuerta lógica.Se carga en memoria la instrucción 0x0296C008, que representa and $12, $10, $11 (Opcode 00000, funct 001000).  
+
+## Code
+
+RTM32> reset
+
+System reset sequence complete.
+
+RTM32> set r10 0xFFFF
+
+RTM32> set r11 0x000F
+
+RTM32> set [0x0] 0x0296C008   
+
+RTM32> set pc 0x0
+
+RTM32> step 1
+
+Stepped instructions. Target PC: 0x00000004
+
+RTM32> registers
+
+=== General Purpose Registers ===
+R[10]: 0x0000FFFF   R[11]: 0x0000000F
+
+R[12]: 0x0000000F   R[13]: 0x00000000
+...
+=== Control & Special Registers ===
+PC      : 0x00000004  CAUSE   : 0x00000000
+
+Postcondiciones:Evaluar el valor final de R12.Revisar ausencia de excepciones en CAUSE.
+
+Conclusiones:Anduvo. Al realizar la operación lógica AND bit a bit entre 0xFFFF y 0x000F, el resultado conservó únicamente los 4 bits menos significativos encendidos, guardando correctamente el valor 0x0000000F en el registro R12.
+
+# Caso 7
+
+Descripción:Testeo de la instrucción lógica de tipo R OR para verificar la suma lógica bit a bit.
+
+Instrucctions: instrucciones que use durante el test
+resetset r10 0x00F0
+set r11 0x000F
+set [0x0] 0x0296C009
+set pc 0x0
+step 1
+registers
+
+Precondiciones:El procesador se reinicia.Se setean R10 = 0x00F0 y R11 = 0x000F.Se inserta 0x0296C009 en la celda 0x0, lo cual equivale a or $12, $10, $11 (Opcode 00000, funct 001001).  
+
+## Code
+
+RTM32> reset
+
+RTM32> set r10 0x00F0
+
+RTM32> set r11 0x000F
+
+RTM32> set [0x0] 0x0296C009
+
+RTM32> set pc 0x0
+
+RTM32> step 1
+
+Target PC: 0x00000004
+
+RTM32> registers
+=== General Purpose Registers ===
+R[10]: 0x000000F0   R[11]: 0x0000000F
+R[12]: 0x000000FF   R[13]: 0x00000000
+...
+Postcondiciones:Observar el estado del registro destino R12.
+
+Conclusiones:Anduvo. La instrucción combinó exitosamente los bits de ambos registros mediante la compuerta OR, uniendo 0x00F0 y 0x000F para arrojar un resultado final de 0x000000FF depositado de manera correcta en el registro R12.
+
+# Caso 8
+
+Descripción:Testeo de la instrucción de carga desde memoria de tipo I LW (Load Word) para validar la lectura alineada a la RAM.
+
+Instrucctions: instrucciones que use durante el testresetset [0x0] 0x40140000set pc 0x0step 1registers
+
+Precondiciones:Se aplica el reinicio del sistema.Se graba 0x40140000 en la dirección 0x0, que decodifica como lw $10, 0($0). Como la base es el registro $0 ($0$) y el offset es $0$, la CPU intentará leer el contenido de la dirección 0x0 (la misma instrucción que se está ejecutando).  
+
+## Code RTM32> reset
+
+RTM32> set [0x0] 0x40140000
+
+RTM32> set pc 0x0
+
+RTM32> step 1
+
+Target PC: 0x00000004
+
+RTM32> registers
+
+=== General Purpose Registers ===
+R[ 0]: 0x00000000   R[ 1]: 0x00000000
+R[10]: 0x40140000   R[11]: 0x00000000
+...
+
+Last Memory Operation:
+
+Address: 0x00000000 | Size: 0x00000004 | Type: READ
+
+Postcondiciones:Chequear que R10 cargue el valor binario almacenado en la memoria en la dirección efectiva calculada.
+
+Conclusiones:Anduvo. Se verificó que el procesador calculó la dirección efectiva ($0 + 0 = 0$) y ejecutó una operación de lectura (READ de 4 bytes) sobre la RAM, cargando exitosamente el valor 0x40140000 (que casualmente es el opcode de la instrucción misma) en el registro destino R10.
+
+# Caso 9
+
+Descripción:Testeo de la instrucción de salto incondicional de tipo J J (Jump) para asegurar el cálculo de direcciones directas.
+
+Instrucctions: instrucciones que use durante el test
+
+reset
+
+set [0x0] 0x10000004
+
+set pc 0x0
+
+step 1
+
+registers
+
+Precondiciones:El sistema se prepara desde cero.Se carga la instrucción 0x10000004 (Opcode 00010), donde el campo address es 0x4. Dado que se multiplica por 4 para obtener la dirección final, el salto apuntará a 0x10 ($16$ en decimal).  
+
+## Code
+
+RTM32> reset
+
+RTM32> set [0x0] 0x10000004
+
+RTM32> set pc 0x0
+
+RTM32> step 1
+
+Stepped instructions. Target PC: 0x00000010
+
+RTM32> registers
+
+=== Control & Special Registers ===
+PC      : 0x00000010  CAUSE   : 0x00000000
+
+Postcondiciones:Verificar que el PC refleje la dirección de salto objetivo sin alterar registros generales.
+
+Conclusiones:Anduvo. La instrucción sobrescribió correctamente el flujo de ejecución, ignorando el salto condicional. El decodificador concatenó los bits superiores del PC actual y multiplicó el inmediato del campo J por 4, llevando el PC final a la dirección esperada 0x00000010 de forma limpia.
+
+# Caso 10
+
+Descripción:Testeo de la instrucción de salto condicional BNE (Branch on Not Equal) para validar ramificaciones por desigualdad.
+
+Instrucctions: instrucciones que use durante el test
+reset
+set r10 1
+set r11 0
+set [0x0] 0x8A960002
+set pc 0x0
+step 1
+registers
+
+Precondiciones:Registros R10 y R11 se setean con valores distintos (1 y 0).Se introduce 0x8A960002, que codifica bne $10, $11, 2. Al ser distintos, saltará $2$ palabras hacia adelante respecto al PC siguiente.  
+## Code
+
+RTM32> reset
+
+RTM32> set r10 1
+
+RTM32> set r11 0
+
+RTM32> set [0x0] 0x8A960002
+
+RTM32> set pc 0x0
+
+RTM32> step 1
+
+Target PC: 0x0000000C
+
+RTM32> registers
+
+=== Control & Special Registers ===
+PC      : 0x0000000C  CAUSE   : 0x00000000
+
+Postcondiciones:El PC debe reflejar la suma del offset.
+
+Conclusiones:Anduvo. La condición de desigualdad se cumplió ($1 \neq 0$), provocando el branch. El hardware calculó la próxima dirección sumando el PC nominal ($4$) al offset desplazado ($2 \times 4 = 8$), dejando el Program Counter en 0x0000000C.
+
+# Caso 11
+
+Descripción:Testeo de la instrucción de desplazamiento lógico a la izquierda SLL (Shift Left Logical).Instrucctions: instrucciones que use durante el testresetset r10 0x1set [0x0] 0x00146080set pc 0x0step 1registersPrecondiciones:R10 contiene el valor 1.La instrucción 0x00146080 representa sll $12, $10, 2 (usa el campo auxiliar para indicar un corrimiento de 2 posiciones).  
+
+Code
+
+RTM32> reset
+RTM32> set r10 0x1
+RTM32> set [0x0] 0x00146080
+RTM32> set pc 0x0
+RTM32> step 1
+RTM32> registers
+=== General Purpose Registers ===
+R[10]: 0x00000001
+R[12]: 0x00000004
+
+Postcondiciones:Verificar que R12 haya multiplicado efectivamente el valor por $2^2$.
+
+Conclusiones:Anduvo. El procesador STX4 tomó el operando en R10 (0x1) y desplazó sus bits dos posiciones a la izquierda basándose en el campo aux, almacenando correctamente el resultado final de 0x4 en el registro R12.
+
+# Caso 12
+
+Descripción:Testeo de la instrucción comparativa SLT (Set on Less Than).
+
+Instrucctions: instrucciones que use durante el test
+
+reset
+set r10 2
+set r11 5
+set [0x0] 0x0296C00C
+set pc 0x0
+step 1
+registers
+
+Precondiciones:R10 = 2 y R11 = 5.La instrucción 0x0296C00C decodifica como slt $12, $10, $11. Evalúa si R10 < R11, si es verdadero setea el destino en 1.  
+
+Code 
+
+RTM32> reset
+RTM32> set r10 2
+RTM32> set r11 5
+RTM32> set [0x0] 0x0296C00C
+RTM32> set pc 0x0
+RTM32> step 1
+RTM32> registers
+=== General Purpose Registers ===
+R[10]: 0x00000002   R[11]: 0x00000005
+R[12]: 0x00000001
+
+Postcondiciones:Confirmar que R12 cambie a 1 (booleano verdadero).
+
+Conclusiones:Anduvo. La ALU efectuó la comparación numérica entre los registros; al ser $2 < 5$, devolvió un booleano positivo que se depositó con éxito como un 0x1 en R12.
+
+# Caso 13
+
+Descripción:Testeo de la instrucción LUI (Load Upper Immediate) para verificar la carga de constantes en la porción alta de la palabra.
+
+Instrucctions: instrucciones que use durante el test
+
+reset
+set [0x0] 0x381400FF
+set pc 0x0
+step 1
+registers
+
+Precondiciones:El sistema inicia en limpio.La instrucción 0x381400FF se inyecta en memoria, significando lui $10, 0x00FF (Formato L: carga el inmediato en los 16 bits superiores de R10 y llena de ceros los inferiores). 
+
+Code
+
+RTM32> reset
+RTM32> set [0x0] 0x381400FF
+RTM32> set pc 0x0
+RTM32> step 1
+RTM32> registers
+=== General Purpose Registers ===
+R[10]: 0x00FF0000
+
+Postcondiciones:Validar el alineamiento correcto de los 16 bits ingresados en la zona superior del registro destino.
+
+Conclusiones:Anduvo. El procesador decodificó el formato L, tomó la constante de 16 bits 0x00FF proporcionada en el inmediato de la instrucción, la ubicó en la mitad más significativa (MSB) y completó la mitad baja (LSB) con ceros lógicos, dejando el registro R10 exactamente en 0x00FF0000.
+
+# Caso 14
+
+Descripción:Testeo de la instrucción JR (Jump Register) para certificar saltos dinámicos en tiempo de ejecución.
+
+Instrucctions: instrucciones que use durante el test
+
+reset
+set r10 0x20
+set [0x0] 0x0280000E
+set pc 0x0
+step 1
+registers
+
+Precondiciones:R10 se inicializa con el valor destino del salto, en este caso 0x20.La memoria en 0x0 recibe 0x0280000E, equivalente a jr $10 (Opcode 00000, funct 001110), forzando al hardware a copiar el valor del registro directamente al PC.  
+
+Code
+
+RTM32> reset
+RTM32> set r10 0x20
+RTM32> set [0x0] 0x0280000E
+RTM32> set pc 0x0
+RTM32> step 1
+Target PC: 0x00000020
+RTM32> registers
+=== Control & Special Registers ===
+PC      : 0x00000020  CAUSE   : 0x00000000
+
+Postcondiciones:Asegurar que el PC tome de forma absoluta el contenido de R10.
+
+Conclusiones:Anduvo. No se detectaron fallos de cálculo. El registro PC fue sobreescrito directamente por la unidad de control, abandonando la secuencia secuencial e incrustando el valor absoluto que residía en el registro fuente (0x20), logrando un cambio de flujo dinámico exitoso.
