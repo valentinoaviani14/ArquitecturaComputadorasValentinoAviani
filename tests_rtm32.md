@@ -125,10 +125,10 @@ Testeo de la instrucción de tipo I `SW` (Store Word) en la versión corregida d
 * `registers`
 
 ## Precondiciones: 
-- [cite_start]El sistema debe encontrarse inicializado tras una secuencia de reset completa operando en modo KERNEL[cite: 185].
+- El sistema debe encontrarse inicializado tras una secuencia de reset completa operando en modo KERNEL.
 - Se altera el contenido del registro `R10` asignándole el patrón de datos de prueba `0xABCDEFFF` para ser usado como fuente.
-- [cite_start]Se escribe en la celda de memoria `0x0` el código equivalente a `0x48140000`, correspondiente a la instrucción `sw $10, 0($0)` según el mapeo de opcodes del manual del procesador STX4.
-- [cite_start]El PC debe estar direccionado en `0x0`[cite: 177].
+- Se escribe en la celda de memoria `0x0` el código equivalente a `0x48140000`, correspondiente a la instrucción `sw $10, 0($0)` según el mapeo de opcodes del manual del procesador STX4.
+- El PC debe estar direccionado en `0x0`.
 
 ## Code
 
@@ -595,6 +595,62 @@ PC      : 0x00000020  CAUSE   : 0x00000000
 Postcondiciones:Asegurar que el PC tome de forma absoluta el contenido de R10.
 
 Conclusiones:Anduvo. No se detectaron fallos de cálculo. El registro PC fue sobreescrito directamente por la unidad de control, abandonando la secuencia secuencial e incrustando el valor absoluto que residía en el registro fuente (0x20), logrando un cambio de flujo dinámico exitoso.
+
+# Caso 15
+## Descripción:
+Re-testeo de la instrucción de tipo I `ADDI` (Suma Inmediata) tras la subsanación del bug de desborde en el decodificador de formatos inmediatos por parte de la cátedra, con el fin de verificar la correcta carga de constantes en un registro.
+
+## Instrucctions: instrucciones que use durante el test
+* `reset`
+* `set [0x0] 0x08140019`
+* `set pc 0x0`
+* `step 1`
+* `registers`
+
+## Precondiciones:
+- El procesador debe estar inicializado mediante una secuencia de reset completa operando en modo KERNEL.
+- Se escribe en la dirección de memoria `0x0` el valor hexadecimal `0x08140019`, el cual representa la instrucción `addi $10, $0, 25` según el set de instrucciones del procesador STX4.
+- El apuntador del programa PC debe estar seteado en `0x0` para iniciar la ejecución en la instrucción bajo prueba.
+
+## Code
+
+RTM32> reset
+System reset sequence complete. Target PC: 0xF0000000 (Mode: KERNEL)
+RTM32> set [0x0] 0x08140019
+RTM32> set pc 0x0
+Program Counter (PC) set to 0x00000000
+RTM32> step 1
+Stepped instructions. Target PC: 0x00000004
+RTM32> registers
+=== General Purpose Registers ===
+R[ 0]: 0x00000000   R[ 1]: 0x00000000   R[ 2]: 0x00000000   R[ 3]: 0x00000000
+R[ 4]: 0x00000000   R[ 5]: 0x00000000   R[ 6]: 0x00000000   R[ 7]: 0x00000000
+R[ 8]: 0x00000000   R[ 9]: 0x00000000   R[10]: 0x00000019   R[11]: 0x00000000
+R[12]: 0x00000000   R[13]: 0x00000000   R[14]: 0x00000000   R[15]: 0x00000000
+R[16]: 0x00000000   R[17]: 0x00000000   R[18]: 0x00000000   R[19]: 0x00000000
+R[20]: 0x00000000   R[21]: 0x00000000   R[22]: 0x00000000   R[23]: 0x00000000
+R[24]: 0x00000000   R[25]: 0x00000000   R[26]: 0x00000000   R[27]: 0x00000000
+R[28]: 0x00000000   R[29]: 0x00000000   R[30]: 0x00000000   R[31]: 0x00000000
+
+=== Control & Special Registers ===
+PC      : 0x00000004  CAUSE   : 0x00000000  EPC     : 0x00000000
+BADVADR : 0x00000000  VBR     : 0xF0000000
+
+Execution State:
+Mode: KERNEL | Flags: [-----]
+
+Last Memory Operation:
+Address: 0x00000000 | Size: 0x00000004 | Type: FETCH
+
+## Postcondiciones:
+Ejecutar el comando registers para evaluar el estado final de los bancos de memoria de la CPU.
+
+Constatar que el registro de control CAUSE permanezca limpio en 0x00000000 (sin excepciones de ejecución).
+
+Verificar que el registro de propósito general R10 haya modificado exitosamente su contenido original por la constante decimal 25 (0x00000019 en hexadecimal).
+
+## Conclusiones:
+Anduvo. A diferencia del escenario analizado en las primeras pruebas (donde la falta de un delimitador de fin de rutina en las instrucciones lógicas con inmediato desbordaba el flujo provocando una excepción por instrucción ilegal CAUSE: 0x00000003), la nueva versión corregida por la cátedra decodificó e implementó el formato Tipo I de manera exitosa. El registro R10 asimiló correctamente la constante extendida con signo y la unidad de control operó sin disparar excepciones de hardware.
 
 # Instrucciones restantes:
 
