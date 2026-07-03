@@ -716,6 +716,170 @@ Constatar que el ordenamiento de los bytes en la RAM refleje la distribución f�
 ## Conclusiones:
 Anduvo. Se valida exitosamente la integración de la instrucción SW y la nueva lógica del comando de depuración examine. El procesador completó la transferencia de 4 bytes sin generar excepciones (CAUSE: 0x00000000). Al inspeccionar la memoria con examine /xb 0 4, el entorno disgregó correctamente el contenido grabado (FF EF CD AB), confirmando de forma empírica que la arquitectura STX4 almacena los datos bajo la convención Little-Endian (el byte menos significativo del registro se guarda en la dirección de memoria más baja).
 
+# Caso 17
+## Descripción:
+Testeo de la instrucción lógica de tipo L `ORI` (Or Inmediato) con el bit indicador $h=0$ para comprobar el correcto procesamiento de máscaras lógicas bit a bit contra constantes inmediatas en la parte baja del registro.
+
+## Instrucctions: instrucciones que use durante el test
+* `reset`
+* `set r10 0x55000000`
+* `set [0x0] 0x2A9800FF`
+* `set pc 0x0`
+* `step 1`
+* `registers`
+
+## Precondiciones:
+- Inicializar el simulador mediante la secuencia de reset completa operando en modo KERNEL.
+- Cargar previamente el registro origen `R10` con el valor de prueba `0x55000000`.
+- Inyectar en la dirección de memoria `0x0` el código hexadecimal `0x2A9800FF`, correspondiente a la instrucción `ori $12, $10, 0x00FF` (con $h=0$) según las especificaciones del formato L de la arquitectura STX4.
+- Satear el Contador de Programa (PC) en `0x0`.
+
+## Code
+
+RTM32> reset
+System reset sequence complete. Target PC: 0xF0000000 (Mode: KERNEL)
+RTM32> set r10 0x55000000
+Register R10 set to 0x55000000
+RTM32> set [0x0] 0x2A9800FF
+RTM32> set pc 0x0
+Program Counter (PC) set to 0x00000000
+RTM32> step 1
+Stepped instructions. Target PC: 0x00000004
+RTM32> registers
+=== General Purpose Registers ===
+R[ 0]: 0x00000000   R[ 1]: 0x00000000   R[ 2]: 0x00000000   R[ 3]: 0x00000000
+R[ 4]: 0x00000000   R[ 5]: 0x00000000   R[ 6]: 0x00000000   R[ 7]: 0x00000000
+R[ 8]: 0x00000000   R[ 9]: 0x00000000   R[10]: 0x55000000   R[11]: 0x00000000
+R[12]: 0x550000FF   R[13]: 0x00000000   R[14]: 0x00000000   R[15]: 0x00000000
+R[16]: 0x00000000   R[17]: 0x00000000   R[18]: 0x00000000   R[19]: 0x00000000
+R[20]: 0x00000000   R[21]: 0x00000000   R[22]: 0x00000000   R[23]: 0x00000000
+R[24]: 0x00000000   R[25]: 0x00000000   R[26]: 0x00000000   R[27]: 0x00000000
+R[28]: 0x00000000   R[29]: 0x00000000   R[30]: 0x00000000   R[31]: 0x00000000
+
+=== Control & Special Registers ===
+PC      : 0x00000004  CAUSE   : 0x00000000  EPC     : 0x00000000
+BADVADR : 0x00000000  VBR     : 0xF0000000
+
+Execution State:
+Mode: KERNEL | Flags: [-----]
+
+Last Memory Operation:
+Address: 0x00000000 | Size: 0x00000004 | Type: FETCH
+
+## Postcondiciones:
+Correr el comando registers para comprobar las modificaciones del banco de registros generales tras la instrucción.Asegurar que el registro de excepciones CAUSE se mantenga en 0x00000000.Validar que el registro de destino R12 refleje la combinación bit a bit del operando de R10 y el inmediato asignado.
+
+## Conclusiones:
+Anduvo. Se llegó a esta conclusión debido a que la CPU operó de manera ideal y sin generar excepciones en el registro de control CAUSE. Al haberse establecido el modificador $h=0$, el hardware procesó la constante de 16 bits (0x00FF) extendiéndola con ceros en la porción alta para efectuar la suma lógica OR bit a bit contra el contenido de R10 (0x55000000). El resultado almacenado en R12 fue exactamente 0x550000FF, corroborando la total corrección del módulo decodificador de instrucciones inmediatas del simulador.
+
+# Caso 18
+## Descripción:
+Testeo de la instrucción lógica de tipo L `XORI` (XOR Inmediato) con $h=0$ para comprobar el comportamiento de la función O-exclusiva contra una constante inmediata en la parte baja del registro.
+
+## Instrucctions: instrucciones que use durante el test
+* `reset`
+* `set r2 0x0000FFFF`
+* `set [0x0] 0x304300FF`
+* `set pc 0x0`
+* `step 1`
+* `registers`
+
+## Precondiciones:
+- Se inicializa el simulador con un reset completo operando en modo KERNEL.
+- Se precarga el registro temporario `R2` ($R[2]$ o `$t0` según la nueva convención) con el valor `0x0000FFFF`.
+- Se inyecta en la dirección de memoria `0x0` el código hexadecimal `0x304300FF`, correspondiente a la instrucción `xori $3, $2, 0x00FF` (Opcode `00110`, fuente `R2`, destino `R3`/`$t1`, $h=0$ e inmediato `0x00FF`).
+- El PC debe apuntar a la dirección `0x0`.
+
+## Code:
+
+RTM32> reset
+System reset sequence complete. Target PC: 0xF0000000 (Mode: KERNEL)
+RTM32> set r2 0x0000FFFF
+Register R2 set to 0x0000FFFF
+RTM32> set [0x0] 0x304300FF
+RTM32> set pc 0x0
+Program Counter (PC) set to 0x00000000
+RTM32> step 1
+Stepped instructions. Target PC: 0x00000004
+RTM32> registers
+
+=== General Purpose Registers ===
+R[ 0]: 0x00000000   R[ 1]: 0x00FF0000   R[ 2]: 0x0000FFFF   R[ 3]: 0x00000000
+R[ 4]: 0x00000000   R[ 5]: 0x00000000   R[ 6]: 0x00000000   R[ 7]: 0x00000000
+R[ 8]: 0x00000000   R[ 9]: 0x00000000   R[10]: 0x00000000   R[11]: 0x00000000
+R[12]: 0x00000000   R[13]: 0x00000000   R[14]: 0x00000000   R[15]: 0x00000000
+R[16]: 0x00000000   R[17]: 0x00000000   R[18]: 0x00000000   R[19]: 0x00000000
+R[20]: 0x00000000   R[21]: 0x00000000   R[22]: 0x00000000   R[23]: 0x00000000
+R[24]: 0x00000000   R[25]: 0x00000000   R[26]: 0x00000000   R[27]: 0x00000000
+R[28]: 0x00000000   R[29]: 0x00000000   R[30]: 0x00000000   R[31]: 0x00000000
+
+=== Control & Special Registers ===
+PC      : 0x00000004  CAUSE   : 0x00000000  EPC     : 0x00000000
+BADVADR : 0x00000000  VBR     : 0xF0000000
+
+Execution State:
+Mode: KERNEL | Flags: [-----]
+
+Last Memory Operation:
+Address: 0x00000000 | Size: 0x00000004 | Type: FETCH
+
+## Postcondiciones:
+Correr el comando registers para evaluar el banco de registros generales.Verificar que CAUSE se mantenga en 0x00000000.Validar que el registro destino R3 contenga la inversión de los últimos 8 bits del registro origen debido al XOR lógico (0x0000FFFF ^ 0x000000FF = 0x0000FF00).
+
+## Conclusiones:
+Anduvo. La instrucción Tipo L operó correctamente aplicando la extensión con ceros en los 16 bits superiores del inmediato (0x000000FF) gracias a la condición $h=0$. La ALU resolvió con éxito la máscara de bits XOR en base a la tabla de verdad (bits iguales a 0, bits distintos a 1), guardando en R3 el valor exacto 0x0000FF00 sin activar alertas en el registro de causas.  
+
+# Caso 19
+
+## Descripción:
+Testeo de la instrucción de desplazamiento de tipo R SLLR (Shift Left Logical Variable) para validar el comportamiento de corrimiento de bits utilizando un registro dinámico como cantidad de desplazamientos.
+## Instrucctions: 
+instrucciones que use durante el test
+
+reset
+set r2 4
+set r3 0x0000000F
+set [0x0] 0x004320C3
+set pc 0x0
+step 1
+registers
+
+## Precondiciones:
+El simulador se inicializa mediante la secuencia de reset completa.Se setea en el registro R2 ($`$t0`$) el valor 4, que actuará como la cantidad de bits a desplazar.  Se setea en el registro R3 ($`$t1`$) el valor a transformar 0x0000000F.  Se graba en la celda 0x0 la instrucción en hexadecimal 0x004320C3, que mapea a sllr $4, $2, $3 (Opcode 00000, rs=2, rt=3, rd=4/$t2, func=000011).  El PC se ajusta a la dirección 0x0.
+
+## Code:
+
+RTM32> reset
+System reset sequence complete. Target PC: 0xF0000000 (Mode: KERNEL)
+RTM32> set r2 4
+Register R2 set to 0x00000004
+RTM32> set r3 0x0000000F
+Register R3 set to 0x0000000F
+RTM32> set [0x0] 0x004320C3
+RTM32> set pc 0x0
+Program Counter (PC) set to 0x00000000
+RTM32> step 1
+Stepped instructions. Target PC: 0x00000004
+RTM32> registers
+=== General Purpose Registers ===
+R[ 0]: 0x00000000   R[ 1]: 0x00000000   R[ 2]: 0x00000004   R[ 3]: 0x0000000F
+R[ 4]: 0x00000000   R[ 5]: 0x00000000   R[ 6]: 0x00000000   R[ 7]: 0x00000000
+R[ 8]: 0x00000000   R[ 9]: 0x00000000   R[10]: 0x00000000   R[11]: 0x00000000
+R[12]: 0x00000000   R[13]: 0x00000000   R[14]: 0x00000000   R[15]: 0x00000000
+R[16]: 0x00000000   R[17]: 0x00000000   R[18]: 0x00000000   R[19]: 0x00000000
+R[20]: 0x00000000   R[21]: 0x00000000   R[22]: 0x00000000   R[23]: 0x00000000
+R[24]: 0x00000000   R[25]: 0x00000000   R[26]: 0x00000000   R[27]: 0x00000000
+R[28]: 0x00000000   R[29]: 0x00000000   R[30]: 0x00000000   R[31]: 0x00000000
+
+=== Control & Special Registers ===
+PC      : 0x00000004  CAUSE   : 0x00000000  EPC     : 0x00000000
+BADVADR : 0x00000000  VBR     : 0xF0000000
+
+Execution State:
+Mode: KERNEL | Flags: [-----]
+
+Last Memory Operation:
+Address: 0x00000000 | Size: 0x00000004 | Type: FETCH
 
 
 # Instrucciones restantes:
