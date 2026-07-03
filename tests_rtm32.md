@@ -55,9 +55,9 @@ Address: 0x00000000 | Size: 0x00000004 | Type: FETCH
 
 Conclusiones: Anduvo. Se llegó a esta conclusión porque tras realizar el paso único de ejecución, el registro destino R12 pasó de 0x0 a 0x8, demostrando que la unidad aritmética decodificó correctamente el Opcode 00000 y la función 011100 del procesador STX4
 
-## Caso 2: 
+# Caso 2: 
 
-Descripción:
+## Descripción:
 Testeo de la instrucción de tipo I ADDI (Suma Inmediata) para comprobar la carga directa de una constante en un registro utilizando la extensión de signo del procesador y el registro cableado a cero.
 
 Instrucctions: instrucciones que use durante el test
@@ -113,8 +113,8 @@ Address: 0x00000000 | Size: 0x00000004 | Type: FETCH
 Conclusiones: Al final de la página 4, el manual advierte textualmente: "Actualmente hay un bug importante a solucionar en la instrucción ANDI". Nose si tiene que ver con esto, pero esto fue lo que me ocurrio explicitamente.
  
 # Caso 3
-## Descripción: que estoy testeando
-Testeo de la instrucción de tipo I `SW` (Store Word) para comprobar el ciclo de escritura en la memoria RAM calculando una dirección efectiva mediante base más desplazamiento (offset).
+## Descripción:
+Testeo de la instrucción de tipo I `SW` (Store Word) en la versión corregida del simulador para comprobar el ciclo de escritura completo de una palabra (4 bytes) en la memoria RAM mediante direccionamiento indexado.
 
 ## Instrucctions: instrucciones que use durante el test
 * `reset`
@@ -125,16 +125,16 @@ Testeo de la instrucción de tipo I `SW` (Store Word) para comprobar el ciclo de
 * `registers`
 
 ## Precondiciones: 
-- El sistema debe encontrarse inicializado tras una secuencia de reset completa.
+- [cite_start]El sistema debe encontrarse inicializado tras una secuencia de reset completa operando en modo KERNEL[cite: 185].
 - Se altera el contenido del registro `R10` asignándole el patrón de datos de prueba `0xABCDEFFF` para ser usado como fuente.
-- Se escribe en la celda de memoria `0x0` el código equivalente a `0x48140000`, correspondiente a la instrucción `sw $10, 0($0)` según el mapeo de opcodes del manual del procesador STX4.
-- El PC debe estar direccionado en `0x0`.
+- [cite_start]Se escribe en la celda de memoria `0x0` el código equivalente a `0x48140000`, correspondiente a la instrucción `sw $10, 0($0)` según el mapeo de opcodes del manual del procesador STX4.
+- [cite_start]El PC debe estar direccionado en `0x0`[cite: 177].
 
-## Code:
+## Code
 
 RTM32> reset
 System reset sequence complete. Target PC: 0xF0000000 (Mode: KERNEL)
-RTM32> set r10 0xABCDEFFF`
+RTM32> set r10 0xABCDEFFF
 Register R10 set to 0xABCDEFFF
 RTM32> set [0x0] 0x48140000
 RTM32> set pc 0x0
@@ -160,15 +160,16 @@ Execution State:
 Mode: KERNEL | Flags: [-----]
 
 Last Memory Operation:
-Address: 0x00000000 | Size: 0x00000002 | Type: WRITE
+Address: 0x00000000 | Size: 0x00000004 | Type: WRITE
 
-Postcondiciones:
-Ejecutar el comando registers para evaluar el estado de los registros de control e inspeccionar la última operación de memoria realizada (Last Memory Operation).
+## Postcondiciones:
+Ejecutar el comando registers para evaluar el estado de los registros de control e inspeccionar la última operación de memoria realizada (Last Memory Operation).  
 
-Verificar que el registro CAUSE permanezca en 0x00000000, garantizando que la ejecución no interrumpió el flujo del procesador por excepciones de alineación o código inválido
+Verificar que el registro CAUSE permanezca en 0x00000000, garantizando que la ejecución no interrumpió el flujo del procesador por excepciones de alineación o código inválido.  Constatar que el campo Size indique un tamaño de transferencia de 0x00000004 bytes.  
 
-Conclusiones:
-Anduvo. Se llegó a esta conclusión debido a que tras realizar el paso único (step 1), el registro de control CAUSE se mantuvo en 0x00000000, indicando que no se generaron excepciones. Asimismo, la interfaz reportó exitosamente un evento de escritura en memoria (Type: WRITE) sobre la dirección efectiva calculada 0x00000000.
+## Conclusiones:
+
+Anduvo. Se llegó a esta conclusión debido a que tras realizar el paso único (step 1), el registro de control CAUSE se mantuvo en 0x00000000, indicando la ausencia de excepciones. A diferencia de las pruebas con la versión anterior del software (donde se observaba una escritura anómala de 2 bytes), el nuevo entorno de la máquina virtual procesó la instrucción de manera exitosa, confirmando una transferencia de almacenamiento completa de 4 bytes (Size: 0x00000004) de tipo WRITE en la dirección calculada 0x00000000. Con esto queda validada la corrección del bug que me pasaba antes.
 
 # Caso 4
 ## Descripción:
