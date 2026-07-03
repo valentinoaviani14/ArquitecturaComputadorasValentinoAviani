@@ -650,7 +650,73 @@ Constatar que el registro de control CAUSE permanezca limpio en 0x00000000 (sin 
 Verificar que el registro de propósito general R10 haya modificado exitosamente su contenido original por la constante decimal 25 (0x00000019 en hexadecimal).
 
 ## Conclusiones:
-Anduvo. A diferencia del escenario analizado en las primeras pruebas (donde la falta de un delimitador de fin de rutina en las instrucciones lógicas con inmediato desbordaba el flujo provocando una excepción por instrucción ilegal CAUSE: 0x00000003), la nueva versión corregida por la cátedra decodificó e implementó el formato Tipo I de manera exitosa. El registro R10 asimiló correctamente la constante extendida con signo y la unidad de control operó sin disparar excepciones de hardware.
+Anduvo. A diferencia del escenario analizado en las primeras pruebas (donde la falta de un delimitador de fin de rutina en las instrucciones lógicas con inmediato desbordaba el flujo provocando una excepción por instrucción ilegal CAUSE: 0x00000003), la nueva versión corregida decodificó e implementó el formato Tipo I de manera exitosa. El registro R10 asimiló correctamente la constante extendida con signo y la unidad de control operó sin disparar excepciones de hardware.
+
+# Caso 16
+## Descripción:
+Testeo del nuevo comando extendido de depuración `examine` en conjunto con la instrucción de tipo I `SW` (Store Word) para comprobar la visualización selectiva de datos en formato hexadecimal y por bytes de la memoria RAM.
+
+## Instrucctions: instrucciones que use durante el test
+* `reset`
+* `set r10 0xABCDEFFF`
+* `set [0x0] 0x48140000`
+* `set pc 0x0`
+* `step 1`
+* `registers`
+* `examine /xb 0 4`
+
+## Precondiciones:
+- Inicializar el procesador con un reset de secuencia completa operando en modo KERNEL.
+- Cargar el registro `R10` con el patrón de datos de prueba `0xABCDEFFF`.
+- Escribir en la posición de memoria `0x0` la instrucción hexadecimal `0x48140000` (`sw $10, 0($0)`).
+- El PC debe estar direccionado en `0x0`.
+
+## Code
+
+RTM32> reset
+System reset sequence complete. Target PC: 0xF0000000 (Mode: KERNEL)
+RTM32> set r10 0xABCDEFFF
+Register R10 set to 0xABCDEFFF
+RTM32> set [0x0] 0x48140000
+RTM32> set pc 0x0
+Program Counter (PC) set to 0x00000000
+RTM32> step 1
+Stepped instructions. Target PC: 0x00000004
+RTM32> registers
+=== General Purpose Registers ===
+R[ 0]: 0x00000000   R[ 1]: 0x00000000   R[ 2]: 0x00000000   R[ 3]: 0x00000000
+R[ 4]: 0x00000000   R[ 5]: 0x00000000   R[ 6]: 0x00000000   R[ 7]: 0x00000000
+R[ 8]: 0x00000000   R[ 9]: 0x00000000   R[10]: 0xABCDEFFF   R[11]: 0x00000000
+R[12]: 0x00000000   R[13]: 0x00000000   R[14]: 0x00000000   R[15]: 0x00000000
+R[16]: 0x00000000   R[17]: 0x00000000   R[18]: 0x00000000   R[19]: 0x00000000
+R[20]: 0x00000000   R[21]: 0x00000000   R[22]: 0x00000000   R[23]: 0x00000000
+R[24]: 0x00000000   R[25]: 0x00000000   R[26]: 0x00000000   R[27]: 0x00000000
+R[28]: 0x00000000   R[29]: 0x00000000   R[30]: 0x00000000   R[31]: 0x00000000
+
+=== Control & Special Registers ===
+PC      : 0x00000004  CAUSE   : 0x00000000  EPC     : 0x00000000
+BADVADR : 0x00000000  VBR     : 0xF0000000
+
+Execution State:
+Mode: KERNEL | Flags: [-----]
+
+Last Memory Operation:
+Address: 0x00000000 | Size: 0x00000004 | Type: WRITE
+
+RTM32> examine /xb 0 4
+0x00000000: 0xFF 0xEF 0xCD 0xAB
+
+## Postcondiciones:
+Evaluar la salida del bloque Last Memory Operation para corroborar que la escritura involucre una palabra íntegra (Size: 0x00000004) de tipo WRITE.
+
+Emplear la nueva sintaxis del comando examine usando los modificadores de formato hexadecimal (x) y tamaño por byte (b) sobre la dirección de almacenamiento 0 con un conteo de 4.
+
+Constatar que el ordenamiento de los bytes en la RAM refleje la distribución física de la arquitectura.
+
+## Conclusiones:
+Anduvo. Se valida exitosamente la integración de la instrucción SW y la nueva lógica del comando de depuración examine. El procesador completó la transferencia de 4 bytes sin generar excepciones (CAUSE: 0x00000000). Al inspeccionar la memoria con examine /xb 0 4, el entorno disgregó correctamente el contenido grabado (FF EF CD AB), confirmando de forma empírica que la arquitectura STX4 almacena los datos bajo la convención Little-Endian (el byte menos significativo del registro se guarda en la dirección de memoria más baja).
+
+
 
 # Instrucciones restantes:
 
